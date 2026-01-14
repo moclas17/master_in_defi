@@ -1,5 +1,9 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { Providers } from "./providers";
+import { FarcasterProvider } from "@/contexts/FarcasterContext";
+import { SelfProvider } from "@/contexts/SelfContext";
+import { VerificationProvider } from "@/contexts/VerificationContext";
 
 // Fuentes comentadas temporalmente para evitar errores en build sin red
 // Se pueden habilitar cuando haya acceso a internet
@@ -27,10 +31,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className="antialiased"
-      >
-        {children}
+      <body className="antialiased">
+        <Providers>
+          <FarcasterProvider>
+            <SelfProvider>
+              <VerificationProvider>
+                {children}
+              </VerificationProvider>
+            </SelfProvider>
+          </FarcasterProvider>
+        </Providers>
       </body>
     </html>
   );

@@ -1,0 +1,170 @@
+'use client'
+
+/**
+ * Componente para verificación mediante firma de wallet
+ * Basado en ConnectHub pero adaptado para nuestro caso
+ */
+
+import { useConnections, useConnect, useConnectors, useSignMessage, useDisconnect } from 'wagmi'
+import { injected } from 'wagmi/connectors'
+import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
+import { Spinner } from '@/components/ui/Spinner'
+
+interface WalletSignatureButtonProps {
+  onVerified?: (address: string, signature: string) => void
+  message?: string
+}
+
+export function WalletSignatureButton({ 
+  onVerified,
+  message = 'Verifico que soy el propietario de esta wallet para acceder al quiz DeFi Learning'
+}: WalletSignatureButtonProps) {
+  const connections = useConnections()
+  // En Wagmi v2, useConnections retorna conexiones activas
+  const activeConnection = connections[0] // Primera conexión activa
+  const address = activeConnection?.accounts?.[0] as `0x${string}` | undefined
+  const isConnected = connections.length > 0 && !!address
+  
+  const connect = useConnect()
+  const connectors = useConnectors()
+  const disconnect = useDisconnect()
+  const signMessage = useSignMessage({
+    mutation: {
+      onSuccess: async (signature: `0x${string}`) => {
+        if (address) {
+          try {
+            // Verificar firma en backend
+            const response = await fetch('/api/verify-signature', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ address, signature, message })
+            })
+            
+            if (response.ok) {
+              const data = await response.json()
+              if (data.verified) {
+                // Guardar en localStorage
+                localStorage.setItem(`wallet_verified_${address}`, 'true')
+                localStorage.setItem(`wallet_signature_${address}`, signature)
+                
+                // Notificar al contexto
+                window.dispatchEvent(new CustomEvent('wallet-verified', {
+                  detail: { address, signature }
+                }))
+                
+                onVerified?.(address, signature)
+              }
+            }
+          } catch (err) {
+            console.error('Error verifying signature:', err)
+          }
+        }
+      }
+    }
+  })
+
+  const handleConnect = () => {
+    // Usar injected connector por defecto (MetaMask, etc.)
+    const connector = connectors[0] || injected()
+    connect.mutate({ connector })
+  }
+
+  const handleSign = () => {
+    if (address) {
+      signMessage.mutate({ message })
+    }
+  }
+
+  const handleDisconnect = () => {
+    disconnect.mutate()
+    if (address) {
+      localStorage.removeItem(`wallet_verified_${address}`)
+      localStorage.removeItem(`wallet_signature_${address}`)
+    }
+  }
+
+  if (signMessage.isSuccess && address) {
+    return (
+      <Card className="p-4">
+        <div className="flex items-center gap-3">
+          <span className="text-green-500 text-xl">✓</span>
+          <div className="flex-1">
+            <p className="text-sm font-medium text-white">Wallet verificada</p>
+            <p className="text-xs text-zinc-400 font-mono">
+              {address.slice(0, 6)}...{address.slice(-4)}
+            </p>
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleDisconnect}
+            className="text-xs"
+          >
+            Desconectar
+          </Button>
+        </div>
+      </Card>
+    )
+  }
+
+  if (!isConnected) {
+    return (
+      <div className="space-y-3">
+        <Button
+          onClick={handleConnect}
+          disabled={connect.isPending}
+          className="w-full"
+        >
+          {connect.isPending ? (
+            <>
+              <Spinner size="sm" className="mr-2" />
+              Conectando...
+            </>
+          ) : (
+            'Conectar Wallet'
+          )}
+        </Button>
+        <p className="text-xs text-zinc-400 text-center">
+          Conecta tu wallet para verificar tu identidad
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-lg border border-zinc-700 bg-zinc-900/50 p-3">
+        <p className="text-xs text-zinc-400 mb-2">Wallet conectada:</p>
+        <p className="text-sm font-mono text-white">
+          {address?.slice(0, 6)}...{address?.slice(-4)}
+        </p>
+      </div>
+      
+      <Button
+        onClick={handleSign}
+        disabled={signMessage.isPending}
+        className="w-full"
+      >
+        {signMessage.isPending ? (
+          <>
+            <Spinner size="sm" className="mr-2" />
+            Firmando...
+          </>
+        ) : (
+          'Firmar Mensaje para Verificar'
+        )}
+      </Button>
+
+      {signMessage.isError && (
+        <p className="text-xs text-red-400 text-center">
+          Error: {signMessage.error?.message || 'Error al firmar mensaje'}
+        </p>
+      )}
+
+      <p className="text-xs text-zinc-400 text-center">
+        Al firmar, confirmas que eres el propietario de esta wallet
+      </p>
+    </div>
+  )
+}

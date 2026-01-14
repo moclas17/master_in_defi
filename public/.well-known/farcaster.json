@@ -1,0 +1,11 @@
+{
+  "frame": {
+    "name": "DeFi Learning Quiz",
+    "iconUrl": "https://yourdomain.com/icon.png",
+    "homeUrl": "https://yourdomain.com",
+    "imageUrl": "https://yourdomain.com/banner.png",
+    "buttonTitle": "Start Learning",
+    "splashImageUrl": "https://yourdomain.com/splash.png",
+    "splashBackgroundColor": "#000000"
+  }
+}
