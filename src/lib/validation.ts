@@ -106,7 +106,13 @@ export function validateTimestamps(
     errors.push('endTime debe ser un número positivo')
   }
 
-  if (errors.length === 0 && startTime > endTime) {
+  // Solo comparar si ambos son números válidos
+  if (
+    errors.length === 0 &&
+    typeof startTime === 'number' &&
+    typeof endTime === 'number' &&
+    startTime > endTime
+  ) {
     errors.push('startTime debe ser menor que endTime')
   }
 

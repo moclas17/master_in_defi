@@ -14,7 +14,6 @@ interface FarcasterUser {
   username: string | null
   displayName: string | null
   pfpUrl: string | null
-  bio: string | null
 }
 
 interface FarcasterContextType {
@@ -66,7 +65,6 @@ export function FarcasterProvider({ children }: { children: ReactNode }) {
               username: context.user.username || null,
               displayName: context.user.displayName || null,
               pfpUrl: context.user.pfpUrl || null,
-              bio: context.user.bio || null,
             })
           } else {
             setUser(null)
