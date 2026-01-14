@@ -15,17 +15,7 @@ export interface VerificationState {
   verifiedAt?: number // Timestamp de verificación
 }
 
-export interface SelfVerificationData {
-  verificationId: string
-  userId: string
-  verifiedAt: number
-  disclosures: {
-    minimumAge?: number
-    dateOfBirth?: boolean
-    name?: boolean
-    nationality?: boolean
-  }
-}
+// SelfVerificationData está definido en ./self.ts para evitar duplicación
 
 export interface WalletVerificationData {
   address: string

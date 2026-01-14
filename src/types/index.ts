@@ -5,3 +5,4 @@
 export * from './quiz'
 export * from './protocol'
 export * from './verification'
+export * from './self'
