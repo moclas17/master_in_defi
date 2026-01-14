@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getProtocolById } from '@/data/protocols'
 import { getQuizToken, deleteQuizToken } from '@/lib/quiz-tokens'
+import { QUIZ_CONFIG, ERROR_MESSAGES } from '@/lib/constants'
 
 export async function GET(request: NextRequest) {
   try {
@@ -9,7 +10,7 @@ export async function GET(request: NextRequest) {
 
     if (!token) {
       return NextResponse.json(
-        { error: 'Token required' },
+        { error: ERROR_MESSAGES.INVALID_REQUEST },
         { status: 400 }
       )
     }
@@ -19,7 +20,7 @@ export async function GET(request: NextRequest) {
     
     if (!tokenData) {
       return NextResponse.json(
-        { error: 'Invalid or expired token' },
+        { error: ERROR_MESSAGES.INVALID_TOKEN },
         { status: 401 }
       )
     }
@@ -34,11 +35,12 @@ export async function GET(request: NextRequest) {
     }
 
     // Retornar resultados (incluyendo palabra secreta si pasó)
+    const passed = tokenData.score >= QUIZ_CONFIG.MIN_SCORE_TO_PASS
     return NextResponse.json({
       score: tokenData.score,
       total: tokenData.total,
-      passed: tokenData.score >= 3,
-      secretWord: tokenData.score >= 3 ? protocol.secretWord : null,
+      passed,
+      secretWord: passed ? protocol.secretWord : null,
       protocolName: protocol.title || protocol.name
     })
   } catch (error) {

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getQuestionsByProtocol } from '@/data/questions'
 import { getProtocolById } from '@/data/protocols'
 import { setQuizToken } from '@/lib/quiz-tokens'
+import { QUIZ_CONFIG, ERROR_MESSAGES } from '@/lib/constants'
+import { validateRequired, validateQuizAnswers, validateTimestamps } from '@/lib/validation'
 import crypto from 'crypto'
 
 export async function POST(request: NextRequest) {
@@ -9,11 +11,33 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { protocolId, answers, startTime, endTime } = body
 
-    if (!protocolId || !answers || typeof answers !== 'object') {
+    // Validar campos requeridos
+    const requiredValidation = validateRequired(body, ['protocolId', 'answers'])
+    if (!requiredValidation.valid) {
       return NextResponse.json(
-        { error: 'Invalid request data' },
+        { error: ERROR_MESSAGES.INVALID_REQUEST, details: requiredValidation.errors },
         { status: 400 }
       )
+    }
+
+    // Validar estructura de respuestas
+    const answersValidation = validateQuizAnswers(answers)
+    if (!answersValidation.valid) {
+      return NextResponse.json(
+        { error: ERROR_MESSAGES.INVALID_REQUEST, details: answersValidation.errors },
+        { status: 400 }
+      )
+    }
+
+    // Validar timestamps si están presentes
+    if (startTime !== undefined || endTime !== undefined) {
+      const timestampsValidation = validateTimestamps(startTime, endTime)
+      if (!timestampsValidation.valid) {
+        return NextResponse.json(
+          { error: ERROR_MESSAGES.INVALID_REQUEST, details: timestampsValidation.errors },
+          { status: 400 }
+        )
+      }
     }
 
     // Validar que el protocolo existe
@@ -37,7 +61,7 @@ export async function POST(request: NextRequest) {
     // Validar que se respondieron todas las preguntas
     if (Object.keys(answers).length !== questions.length) {
       return NextResponse.json(
-        { error: 'Not all questions were answered' },
+        { error: ERROR_MESSAGES.NOT_ALL_QUESTIONS_ANSWERED },
         { status: 400 }
       )
     }
@@ -66,19 +90,19 @@ export async function POST(request: NextRequest) {
     // Validar tiempo mínimo (opcional - prevenir respuestas demasiado rápidas)
     if (startTime && endTime) {
       const timeSpent = (endTime - startTime) / 1000 // segundos
-      const minTime = questions.length * 5 // mínimo 5 segundos por pregunta
+      const minTime = questions.length * QUIZ_CONFIG.MIN_TIME_PER_QUESTION
       
       if (timeSpent < minTime) {
         return NextResponse.json(
-          { error: 'Quiz completed too quickly. Please try again.' },
+          { error: ERROR_MESSAGES.QUIZ_TOO_FAST },
           { status: 400 }
         )
       }
     }
 
-    // Generar token temporal (expira en 10 minutos)
+    // Generar token temporal (expira según configuración)
     const token = crypto.randomBytes(32).toString('hex')
-    const expiresAt = Date.now() + 10 * 60 * 1000 // 10 minutos
+    const expiresAt = Date.now() + QUIZ_CONFIG.TOKEN_EXPIRATION_MINUTES * 60 * 1000
 
     setQuizToken(token, {
       score: correctAnswers,
@@ -92,7 +116,7 @@ export async function POST(request: NextRequest) {
       token,
       score: correctAnswers,
       total: questions.length,
-      passed: correctAnswers >= 3,
+      passed: correctAnswers >= QUIZ_CONFIG.MIN_SCORE_TO_PASS,
       expiresAt
     })
   } catch (error) {

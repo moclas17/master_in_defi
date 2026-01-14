@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyMessage } from 'viem'
+import { validateRequired, validateEthereumAddress, validateEthereumSignature } from '@/lib/validation'
+import { ERROR_MESSAGES } from '@/lib/constants'
 
 /**
  * API Route para verificar firmas de wallet
@@ -11,9 +13,27 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { address, signature, message } = body
 
-    if (!address || !signature || !message) {
+    // Validar campos requeridos
+    const requiredValidation = validateRequired(body, ['address', 'signature', 'message'])
+    if (!requiredValidation.valid) {
       return NextResponse.json(
-        { error: 'Missing required fields: address, signature, message' },
+        { error: ERROR_MESSAGES.INVALID_REQUEST, details: requiredValidation.errors },
+        { status: 400 }
+      )
+    }
+
+    // Validar formato de dirección
+    if (!validateEthereumAddress(address)) {
+      return NextResponse.json(
+        { error: 'Formato de dirección inválido' },
+        { status: 400 }
+      )
+    }
+
+    // Validar formato de firma
+    if (!validateEthereumSignature(signature)) {
+      return NextResponse.json(
+        { error: 'Formato de firma inválido' },
         { status: 400 }
       )
     }
