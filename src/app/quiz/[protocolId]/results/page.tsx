@@ -3,6 +3,7 @@
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { Badge } from '@/components/ui/Badge'
+import { QUIZ_CONFIG, ERROR_MESSAGES } from '@/lib/constants'
 
 interface QuizResults {
   score: number
@@ -38,9 +39,9 @@ export default function QuizResultsPage() {
         
         if (!response.ok) {
           if (response.status === 401) {
-            setError('Invalid or expired token. Please complete the quiz again.')
+            setError(ERROR_MESSAGES.INVALID_TOKEN)
           } else {
-            setError('Failed to load results')
+            setError(ERROR_MESSAGES.NETWORK_ERROR)
           }
           setLoading(false)
           return
@@ -158,7 +159,7 @@ export default function QuizResultsPage() {
                 Score achieved: <span className="font-bold text-red-400">{score}/{total}</span>
               </p>
               <p className="mb-8 text-zinc-400">
-                You need at least 3 correct answers to pass. You got {score} out of {total}.
+                Necesitas al menos {QUIZ_CONFIG.MIN_SCORE_TO_PASS} respuestas correctas para pasar. Obtuviste {score} de {total}.
               </p>
 
               {/* Action Buttons */}

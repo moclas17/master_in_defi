@@ -5,6 +5,9 @@ import { useEffect, useState } from 'react'
 import { getProtocolById } from '@/data/protocols'
 import { SafeQuestion, AnswerFeedback } from '@/types/quiz'
 import { useQuiz } from '@/hooks/useQuiz'
+import { QUIZ_CONFIG, ERROR_MESSAGES } from '@/lib/constants'
+import { useErrorHandler } from '@/hooks/useErrorHandler'
+import { ErrorAlert } from '@/components/ui/ErrorAlert'
 
 export default function QuizStartPage() {
   const params = useParams()
@@ -15,6 +18,7 @@ export default function QuizStartPage() {
   const [loading, setLoading] = useState(true)
   const [answerFeedback, setAnswerFeedback] = useState<Record<string, AnswerFeedback>>({})
   const [quizStarted, setQuizStarted] = useState(false)
+  const { error: apiError, handleError, clearError } = useErrorHandler()
 
   const {
     currentQuestion,
@@ -31,7 +35,7 @@ export default function QuizStartPage() {
     lockAnswer,
     nextQuestion,
     startQuiz
-  } = useQuiz({ questions, timePerQuestion: 25 })
+  } = useQuiz({ questions, timePerQuestion: QUIZ_CONFIG.TIME_PER_QUESTION })
 
   // Cargar preguntas desde API (sin respuestas correctas)
   useEffect(() => {
@@ -39,13 +43,15 @@ export default function QuizStartPage() {
       try {
         const response = await fetch(`/api/quiz/questions?protocolId=${protocolId}`)
         if (!response.ok) {
-          throw new Error('Failed to load questions')
+          throw new Error(ERROR_MESSAGES.NETWORK_ERROR)
         }
         const data = await response.json()
         setQuestions(data.questions)
         setLoading(false)
+        clearError()
       } catch (error) {
         console.error('Error loading questions:', error)
+        handleError(error)
         setLoading(false)
       }
     }
@@ -53,7 +59,7 @@ export default function QuizStartPage() {
     if (protocolId) {
       loadQuestions()
     }
-  }, [protocolId])
+  }, [protocolId, handleError, clearError])
 
   // Iniciar quiz cuando se cargan las preguntas (solo una vez)
   useEffect(() => {
@@ -168,9 +174,10 @@ export default function QuizStartPage() {
           [currentQuestion.id]: feedbackData
         }))
       }
-    } catch (error) {
-      console.error('Error getting feedback:', error)
-    }
+      } catch (error) {
+        console.error('Error getting feedback:', error)
+        handleError(error)
+      }
   }
 
   return (
@@ -209,6 +216,13 @@ export default function QuizStartPage() {
               style={{ width: `${progress}%` }}
             />
           </div>
+
+          {/* Error Alert */}
+          {apiError && (
+            <div className="mb-6">
+              <ErrorAlert message={apiError} onDismiss={clearError} />
+            </div>
+          )}
 
           {/* Question */}
           <h2 className="mb-8 text-2xl font-bold leading-relaxed text-white md:text-3xl">
@@ -325,12 +339,11 @@ export default function QuizStartPage() {
                         // Redirigir a resultados con token
                         router.push(`/quiz/${protocolId}/results?token=${data.token}`)
                       } else {
-                        console.error('Error submitting quiz')
-                        router.push(`/quiz/${protocolId}/results`)
+                        handleError(new Error(ERROR_MESSAGES.NETWORK_ERROR))
                       }
                     } catch (error) {
                       console.error('Error submitting quiz:', error)
-                      router.push(`/quiz/${protocolId}/results`)
+                      handleError(error)
                     }
                   }
                 }}
