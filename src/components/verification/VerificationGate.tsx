@@ -5,7 +5,7 @@
  * Basado en ConnectHub pero adaptado para nuestro caso
  */
 
-import { ReactNode } from 'react'
+import { memo, ReactNode } from 'react'
 import { useVerification } from '@/contexts/VerificationContext'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs'
 import { SelfWidget } from './SelfWidget'
@@ -18,7 +18,7 @@ interface VerificationGateProps {
   allowWalletSignature?: boolean
 }
 
-export function VerificationGate({ 
+function VerificationGateComponent({ 
   children, 
   requireVerification = true,
   allowWalletSignature = true 
@@ -105,3 +105,6 @@ export function VerificationGate({
     </div>
   )
 }
+
+// Memoizar componente para evitar re-renders innecesarios
+export const VerificationGate = memo(VerificationGateComponent)

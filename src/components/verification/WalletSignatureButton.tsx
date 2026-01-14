@@ -5,18 +5,20 @@
  * Basado en ConnectHub pero adaptado para nuestro caso
  */
 
+import { memo, useCallback } from 'react'
 import { useConnections, useConnect, useConnectors, useSignMessage, useDisconnect } from 'wagmi'
 import { injected } from 'wagmi/connectors'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Spinner } from '@/components/ui/Spinner'
+import { STORAGE_KEYS, SUCCESS_MESSAGES } from '@/lib/constants'
 
 interface WalletSignatureButtonProps {
   onVerified?: (address: string, signature: string) => void
   message?: string
 }
 
-export function WalletSignatureButton({ 
+function WalletSignatureButtonComponent({ 
   onVerified,
   message = 'Verifico que soy el propietario de esta wallet para acceder al quiz DeFi Learning'
 }: WalletSignatureButtonProps) {
@@ -45,8 +47,8 @@ export function WalletSignatureButton({
               const data = await response.json()
               if (data.verified) {
                 // Guardar en localStorage
-                localStorage.setItem(`wallet_verified_${address}`, 'true')
-                localStorage.setItem(`wallet_signature_${address}`, signature)
+                localStorage.setItem(STORAGE_KEYS.WALLET_VERIFIED(address), 'true')
+                localStorage.setItem(STORAGE_KEYS.WALLET_SIGNATURE(address), signature)
                 
                 // Notificar al contexto
                 window.dispatchEvent(new CustomEvent('wallet-verified', {
@@ -64,25 +66,25 @@ export function WalletSignatureButton({
     }
   })
 
-  const handleConnect = () => {
+  const handleConnect = useCallback(() => {
     // Usar injected connector por defecto (MetaMask, etc.)
     const connector = connectors[0] || injected()
     connect.mutate({ connector })
-  }
+  }, [connectors, connect])
 
-  const handleSign = () => {
+  const handleSign = useCallback(() => {
     if (address) {
       signMessage.mutate({ message })
     }
-  }
+  }, [address, signMessage, message])
 
-  const handleDisconnect = () => {
+  const handleDisconnect = useCallback(() => {
     disconnect.mutate()
     if (address) {
-      localStorage.removeItem(`wallet_verified_${address}`)
-      localStorage.removeItem(`wallet_signature_${address}`)
+      localStorage.removeItem(STORAGE_KEYS.WALLET_VERIFIED(address))
+      localStorage.removeItem(STORAGE_KEYS.WALLET_SIGNATURE(address))
     }
-  }
+  }, [disconnect, address])
 
   if (signMessage.isSuccess && address) {
     return (
@@ -168,3 +170,6 @@ export function WalletSignatureButton({
     </div>
   )
 }
+
+// Memoizar componente para evitar re-renders innecesarios
+export const WalletSignatureButton = memo(WalletSignatureButtonComponent)

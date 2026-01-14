@@ -14,6 +14,8 @@ import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs'
 import { cn } from '@/utils/cn'
+import { config } from '@/lib/config'
+import { SelfApp, SelfVerificationData } from '@/types/self'
 
 interface SelfWidgetProps {
   variant?: 'card' | 'inline'
@@ -186,18 +188,18 @@ function WidgetContent({
   isAuthenticated
 }: {
   isVerified: boolean
-  verificationData: any
+  verificationData: SelfVerificationData | null
   isVerifying: boolean
   error: string | null
   universalLink: string | null
   linkCopied: boolean
-  selfApp: any
+  selfApp: SelfApp | null
   showQR: boolean
   onVerify: () => void
   onCopy: () => void
   onClear: () => void
   onToggleQR: () => void
-  onVerificationSuccess: (data?: any) => void
+  onVerificationSuccess: (data?: SelfVerificationData) => void
   isAuthenticated: boolean
 }) {
   if (isVerified && verificationData) {
@@ -274,7 +276,7 @@ function WidgetContent({
                 console.log('QR verification successful')
                 onVerificationSuccess()
               }}
-              onError={(err: any) => {
+              onError={(err: unknown) => {
                 console.error('QR verification error:', err)
               }}
             />
@@ -371,26 +373,26 @@ function ContractVerificationContent({
   isAuthenticated
 }: {
   isVerified: boolean
-  verificationData: any
+  verificationData: SelfVerificationData | null
   isVerifying: boolean
   error: string | null
   universalLink: string | null
   linkCopied: boolean
-  selfApp: any
+  selfApp: SelfApp | null
   showQR: boolean
   onVerify: () => void
   onCopy: () => void
   onClear: () => void
   onToggleQR: () => void
-  onVerificationSuccess: (data?: any) => void
+  onVerificationSuccess: (data?: SelfVerificationData) => void
   isAuthenticated: boolean
 }) {
   const connections = useConnections()
   const activeConnection = connections[0]
   const address = activeConnection?.accounts?.[0] as `0x${string}` | undefined
 
-  const contractAddress = process.env.NEXT_PUBLIC_VERIFICATION_CONTRACT_ADDRESS
-  const contractChain = process.env.NEXT_PUBLIC_SELF_ENDPOINT_TYPE || 'celo'
+  const contractAddress = config.self.contractAddress
+  const contractChain = config.self.endpointType
 
   if (!contractAddress) {
     return (
@@ -463,11 +465,18 @@ function ContractVerificationContent({
 }
 
 // Importar SelfQRcodeWrapper dinámicamente
-let SelfQRcodeWrapper: any = null
+// Tipo del componente de QR code de Self Protocol
+type SelfQRcodeWrapperType = React.ComponentType<{
+  selfApp: SelfApp
+  onSuccess: () => void
+  onError: (err: unknown) => void
+}>
+
+let SelfQRcodeWrapper: SelfQRcodeWrapperType | null = null
 
 if (typeof window !== 'undefined') {
   import('@selfxyz/qrcode').then((module) => {
-    SelfQRcodeWrapper = module.SelfQRcodeWrapper
+    SelfQRcodeWrapper = module.SelfQRcodeWrapper as SelfQRcodeWrapperType
   }).catch(() => {
     console.warn('@selfxyz/qrcode no disponible')
   })
