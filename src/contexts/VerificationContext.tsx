@@ -10,6 +10,7 @@ import { createContext, useContext, ReactNode } from 'react'
 import { useSelf } from './SelfContext'
 import { useConnections } from 'wagmi'
 import { VerificationMethod } from '@/types/verification'
+import { STORAGE_KEYS } from '@/lib/constants'
 
 interface VerificationContextType {
   isVerified: boolean
@@ -35,7 +36,7 @@ export function VerificationProvider({ children }: { children: ReactNode }) {
   
   // Verificar si hay wallet signature guardada
   const walletVerified = address 
-    ? localStorage.getItem(`wallet_verified_${address}`) === 'true'
+    ? localStorage.getItem(STORAGE_KEYS.WALLET_VERIFIED(address)) === 'true'
     : false
 
   const isVerified = isSelfVerified || walletVerified

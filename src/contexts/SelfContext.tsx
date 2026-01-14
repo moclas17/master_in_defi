@@ -8,17 +8,9 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react'
 import { useConnections } from 'wagmi'
-
-interface SelfVerificationData {
-  verified: boolean
-  verificationId?: string
-  timestamp?: number
-  method?: 'backend' | 'contract'
-  date_of_birth?: string
-  name?: string
-  nationality?: string
-  txHash?: string
-}
+import { config } from '@/lib/config'
+import { STORAGE_KEYS, QUIZ_CONFIG } from '@/lib/constants'
+import { SelfVerificationData, SelfApp } from '@/types/self'
 
 interface SelfContextType {
   isVerified: boolean
@@ -27,7 +19,7 @@ interface SelfContextType {
   isVerifying: boolean
   error: string | null
   universalLink: string | null
-  selfApp: any | null
+  selfApp: SelfApp | null
   showWidget: boolean
   setShowWidget: (show: boolean) => void
   verify: (verificationId: string, method: 'backend' | 'contract', data?: Partial<SelfVerificationData>) => void
@@ -62,29 +54,29 @@ export function SelfProvider({ children }: { children: ReactNode }) {
   const [isVerifying, setIsVerifying] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [universalLink, setUniversalLink] = useState<string | null>(null)
-  const [selfApp, setSelfApp] = useState<any | null>(null)
+  const [selfApp, setSelfApp] = useState<SelfApp | null>(null)
   const [showWidget, setShowWidget] = useState(false)
 
   // Cargar verificación guardada al iniciar
   useEffect(() => {
     if (typeof window === 'undefined') return
 
-    const saved = localStorage.getItem('self_verification')
+    const saved = localStorage.getItem(STORAGE_KEYS.SELF_VERIFICATION)
     if (saved) {
       try {
         const data = JSON.parse(saved) as SelfVerificationData
         if (data.verified && data.timestamp) {
-          // Verificar que no haya expirado (opcional: 30 días)
-          const thirtyDays = 30 * 24 * 60 * 60 * 1000
-          if (Date.now() - data.timestamp < thirtyDays) {
+          // Verificar que no haya expirado
+          const expirationTime = QUIZ_CONFIG.VERIFICATION_EXPIRATION_DAYS * 24 * 60 * 60 * 1000
+          if (Date.now() - data.timestamp < expirationTime) {
             setVerificationData(data)
           } else {
-            localStorage.removeItem('self_verification')
+            localStorage.removeItem(STORAGE_KEYS.SELF_VERIFICATION)
           }
         }
       } catch (err) {
         console.error('Error cargando verificación guardada:', err)
-        localStorage.removeItem('self_verification')
+        localStorage.removeItem(STORAGE_KEYS.SELF_VERIFICATION)
       }
     }
   }, [])
@@ -97,18 +89,13 @@ export function SelfProvider({ children }: { children: ReactNode }) {
       try {
         const { SelfAppBuilder, getUniversalLink } = await import('@selfxyz/qrcode')
 
-        const scope = process.env.NEXT_PUBLIC_SELF_SCOPE || 'defi-quiz-app'
-        const appName = process.env.NEXT_PUBLIC_SELF_APP_NAME || 'DeFi Learning Quiz'
-        const backendEndpoint = process.env.NEXT_PUBLIC_SELF_BACKEND_ENDPOINT
-        const deeplinkCallback = typeof window !== 'undefined' ? window.location.href : ''
-
         const app = new SelfAppBuilder({
           version: 2,
-          appName,
-          scope,
-          endpoint: backendEndpoint || '',
-          deeplinkCallback,
-          logoBase64: process.env.NEXT_PUBLIC_SELF_LOGO_URL || '',
+          appName: config.self.appName,
+          scope: config.self.scope,
+          endpoint: config.self.backendEndpoint || '',
+          deeplinkCallback: config.self.deeplinkCallback,
+          logoBase64: config.self.logoUrl,
           userId: address,
           // Para backend, no especificamos endpointType
           userIdType: 'hex',
@@ -122,7 +109,7 @@ export function SelfProvider({ children }: { children: ReactNode }) {
           }
         }).build()
 
-        setSelfApp(app)
+        setSelfApp(app as SelfApp)
         setUniversalLink(getUniversalLink(app))
       } catch (err) {
         console.error('Error inicializando Self App:', err)
@@ -147,14 +134,14 @@ export function SelfProvider({ children }: { children: ReactNode }) {
     setIsVerifying(false)
     
     // Guardar en localStorage
-    localStorage.setItem('self_verification', JSON.stringify(verification))
+    localStorage.setItem(STORAGE_KEYS.SELF_VERIFICATION, JSON.stringify(verification))
   }, [])
 
   const clearVerification = useCallback(() => {
     setVerificationData(null)
     setError(null)
     setIsVerifying(false)
-    localStorage.removeItem('self_verification')
+    localStorage.removeItem(STORAGE_KEYS.SELF_VERIFICATION)
   }, [])
 
   const initiateSelfVerification = useCallback(async () => {
@@ -193,7 +180,7 @@ export function SelfProvider({ children }: { children: ReactNode }) {
   const checkVerificationStatus = useCallback(async (data?: any) => {
     if (!address) return
 
-    const backendEndpoint = process.env.NEXT_PUBLIC_SELF_BACKEND_ENDPOINT
+    const backendEndpoint = config.self.backendEndpoint
     if (!backendEndpoint) {
       setError('Backend endpoint no configurado')
       return
