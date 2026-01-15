@@ -20,7 +20,7 @@ interface WalletSignatureButtonProps {
 
 function WalletSignatureButtonComponent({ 
   onVerified,
-  message = 'Verifico que soy el propietario de esta wallet para acceder al quiz DeFi Learning'
+  message = 'Verifico que soy el propietario de esta wallet para acceder al quiz Master en DeFi'
 }: WalletSignatureButtonProps) {
   const connections = useConnections()
   // En Wagmi v2, useConnections retorna conexiones activas

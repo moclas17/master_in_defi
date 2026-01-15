@@ -36,7 +36,7 @@ const farcasterEmbed = {
 }
 
 export const metadata: Metadata = {
-  title: "DeFi Learning Quiz | Aprende sobre protocolos DeFi",
+  title: "Master en DeFi | Aprende sobre protocolos DeFi",
   description: "Aprende sobre protocolos DeFi de manera interactiva con nuestro quiz educativo",
   other: {
     // Meta tag para Farcaster Mini App embeds

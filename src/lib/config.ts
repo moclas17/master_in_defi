@@ -6,7 +6,7 @@
 export const config = {
   self: {
     scope: process.env.NEXT_PUBLIC_SELF_SCOPE || 'defi-quiz-app',
-    appName: process.env.NEXT_PUBLIC_SELF_APP_NAME || 'DeFi Learning Quiz',
+    appName: process.env.NEXT_PUBLIC_SELF_APP_NAME || 'Master en DeFi',
     backendEndpoint: process.env.NEXT_PUBLIC_SELF_BACKEND_ENDPOINT,
     contractAddress: process.env.NEXT_PUBLIC_VERIFICATION_CONTRACT_ADDRESS,
     endpointType: (process.env.NEXT_PUBLIC_SELF_ENDPOINT_TYPE || 'celo') as 'celo' | 'base' | 'staging_celo' | 'staging_base',
@@ -16,7 +16,7 @@ export const config = {
   },
   farcaster: {
     siteUrl: process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
-    siteName: process.env.NEXT_PUBLIC_SITE_NAME || 'DeFi Learning Quiz',
+    siteName: process.env.NEXT_PUBLIC_SITE_NAME || 'Master en DeFi',
     appImageUrl: process.env.NEXT_PUBLIC_APP_IMAGE_URL || '',
     appSplashUrl: process.env.NEXT_PUBLIC_APP_SPLASH_URL || '',
     appSplashBgColor: process.env.NEXT_PUBLIC_APP_SPLASH_BG_COLOR || '#000000',

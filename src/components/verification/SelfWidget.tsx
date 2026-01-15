@@ -12,7 +12,6 @@ import { useConnections, useConnect, useConnectors } from 'wagmi'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs'
 import { cn } from '@/utils/cn'
 import { config } from '@/lib/config'
 import { SelfApp, SelfVerificationData } from '@/types/self'
@@ -45,9 +44,7 @@ export function SelfWidget({
     selfApp,
     initiateSelfVerification,
     clearVerification,
-    checkVerificationStatus,
-    showWidget,
-    setShowWidget
+    checkVerificationStatus
   } = useSelf()
 
   // Callback cuando la verificación es exitosa
@@ -56,7 +53,13 @@ export function SelfWidget({
   }
 
   const [linkCopied, setLinkCopied] = useState(false)
-  const [showQR, setShowQR] = useState(showQRCode)
+  const [userToggledQR, setUserToggledQR] = useState<boolean | null>(null)
+  
+  // Auto-mostrar QR cuando hay wallet conectada y selfApp disponible
+  // Si el usuario no ha toggled manualmente, mostrar automáticamente cuando hay selfApp
+  const showQR = userToggledQR !== null 
+    ? userToggledQR 
+    : (showQRCode || (isConnected && !!selfApp && !!universalLink))
 
   // Handler para conectar wallet desde Self Protocol
   const handleConnectWallet = useCallback(() => {
@@ -147,7 +150,7 @@ export function SelfWidget({
         onVerify={initiateSelfVerification}
         onCopy={copyToClipboard}
         onClear={clearVerification}
-        onToggleQR={() => setShowQR(!showQR)}
+        onToggleQR={() => setUserToggledQR(userToggledQR === null ? !showQR : !userToggledQR)}
         onVerificationSuccess={handleVerificationSuccess}
         onConnectWallet={handleConnectWallet}
         isAuthenticated={isAuthenticated}
@@ -194,6 +197,9 @@ function WidgetContent({
   onConnectWallet: () => void
   isAuthenticated: boolean
 }) {
+  // Auto-mostrar QR cuando hay wallet conectada y selfApp disponible
+  // Si showQR es false pero hay selfApp, mostrar automáticamente
+  const shouldShowQR = showQR || (isConnected && !!selfApp && !!universalLink)
   if (isVerified && verificationData) {
     return (
       <div className="space-y-3">
@@ -258,10 +264,10 @@ function WidgetContent({
       )}
 
       {/* QR Code Display */}
-      {showQR && selfApp && (
+      {shouldShowQR && selfApp && (
         <div className="flex flex-col items-center space-y-3">
           <div className="bg-white p-4 rounded-lg border">
-            {/* @ts-ignore - SelfQRcodeWrapper de @selfxyz/qrcode */}
+            {/* @ts-expect-error - SelfQRcodeWrapper de @selfxyz/qrcode puede no estar disponible */}
             <SelfQRcodeWrapper
               selfApp={selfApp}
               onSuccess={() => {
@@ -276,23 +282,6 @@ function WidgetContent({
           <p className="text-xs text-zinc-400 text-center">
             Escanea con la app Self Protocol
           </p>
-        </div>
-      )}
-
-      {/* Advertencia de gas fees */}
-      {!showQR && !isVerifying && (
-        <div className="p-3 bg-amber-900/20 border border-amber-800 rounded-lg">
-          <div className="flex items-start gap-2">
-            <span className="text-amber-400 text-lg">⚠️</span>
-            <div className="flex-1">
-              <p className="text-sm font-medium text-amber-300">
-                Gas Fees Requeridos
-              </p>
-              <p className="text-xs text-amber-400/80 mt-1">
-                Necesitas tokens CELO en tu wallet para pagar gas fees. Costo estimado: ~0.01 CELO
-              </p>
-            </div>
-          </div>
         </div>
       )}
 
@@ -320,58 +309,92 @@ function WidgetContent({
             ) : (
               <>
                 <span className="mr-2">🔗</span>
-                Conectar Wallet de Farcaster
+                Conectar Wallet
               </>
             )}
           </Button>
         </div>
       )}
 
-      {/* Botones - Solo mostrar si hay wallet conectada */}
-      {isConnected && !showQR && (
-        <Button
-          onClick={onVerify}
-          disabled={isVerifying || !universalLink}
-          className="w-full"
-        >
-          {isVerifying ? (
-            <>
-              <Spinner size="sm" className="mr-2" />
-              Esperando verificación...
-            </>
-          ) : !universalLink ? (
-            <>
-              <Spinner size="sm" className="mr-2" />
-              Inicializando...
-            </>
-          ) : (
-            <>
-              <span className="mr-2">🛡️</span>
-              {isAuthenticated ? 'Abrir Self App' : 'Verificar con Self'}
-            </>
-          )}
-        </Button>
+      {/* Estado de inicialización cuando hay wallet pero no hay selfApp aún */}
+      {isConnected && !selfApp && !isVerifying && (
+        <div className="space-y-3">
+          <div className="p-4 border border-blue-500/50 bg-blue-900/20 rounded-lg">
+            <div className="flex items-start gap-3">
+              <Spinner size="sm" className="flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-white mb-1">
+                  Inicializando Self Protocol...
+                </p>
+                <p className="text-xs text-zinc-400">
+                  Generando QR code para verificación. Esto tomará unos segundos.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
-      {/* Botones de QR y copiar - Solo si hay wallet y universalLink */}
-      {isConnected && universalLink && !isVerifying && (
+      {/* Advertencia de gas fees - Solo mostrar si hay wallet, selfApp, y no se está mostrando QR */}
+      {isConnected && selfApp && !shouldShowQR && !isVerifying && (
+        <div className="p-3 bg-amber-900/20 border border-amber-800 rounded-lg">
+          <div className="flex items-start gap-2">
+            <span className="text-amber-400 text-lg">⚠️</span>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-amber-300">
+                Gas Fees Requeridos
+              </p>
+              <p className="text-xs text-amber-400/80 mt-1">
+                Necesitas tokens CELO en tu wallet para pagar gas fees. Costo estimado: ~0.01 CELO
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Botones de acción cuando hay wallet y selfApp */}
+      {isConnected && selfApp && !isVerifying && (
         <div className="space-y-2">
+          {/* Botón para abrir Self App o iniciar verificación */}
           <Button
-            onClick={onToggleQR}
-            variant="outline"
-            size="sm"
+            onClick={onVerify}
+            disabled={isVerifying || !universalLink}
             className="w-full"
           >
-            {showQR ? 'Ocultar QR' : 'Mostrar QR'}
+            {isVerifying ? (
+              <>
+                <Spinner size="sm" className="mr-2" />
+                Esperando verificación...
+              </>
+            ) : (
+              <>
+                <span className="mr-2">🛡️</span>
+                {isAuthenticated ? 'Abrir Self App' : 'Iniciar Verificación con Self'}
+              </>
+            )}
           </Button>
-          <Button
-            onClick={onCopy}
-            variant="ghost"
-            size="sm"
-            className="w-full text-xs text-zinc-400 hover:text-zinc-300"
-          >
-            {linkCopied ? '✓ Link copiado' : '📋 Copiar link (para otro dispositivo)'}
-          </Button>
+
+          {/* Botones de QR y copiar */}
+          {universalLink && (
+            <>
+              <Button
+                onClick={onToggleQR}
+                variant="outline"
+                size="sm"
+                className="w-full"
+              >
+                {shouldShowQR ? 'Ocultar QR' : 'Mostrar QR Code'}
+              </Button>
+              <Button
+                onClick={onCopy}
+                variant="ghost"
+                size="sm"
+                className="w-full text-xs text-zinc-400 hover:text-zinc-300"
+              >
+                {linkCopied ? '✓ Link copiado' : '📋 Copiar link (para otro dispositivo)'}
+              </Button>
+            </>
+          )}
         </div>
       )}
 
