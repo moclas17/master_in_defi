@@ -67,8 +67,10 @@ function WalletSignatureButtonComponent({
   })
 
   const handleConnect = useCallback(() => {
-    // Usar injected connector por defecto (MetaMask, etc.)
-    const connector = connectors[0] || injected()
+    // En Farcaster Mini Apps, priorizar el connector de Farcaster
+    // Si está disponible, usarlo; sino usar el primero disponible
+    const farcasterConnector = connectors.find(c => c.id === 'farcasterMiniApp' || c.id === 'farcasterFrame')
+    const connector = farcasterConnector || connectors[0] || injected()
     connect.mutate({ connector })
   }, [connectors, connect])
 

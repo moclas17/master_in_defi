@@ -1,16 +1,20 @@
 /**
  * Configuración de Wagmi para conexión de wallets
  * Basado en ConnectHub
+ * Incluye soporte para Farcaster Mini App wallet
  */
 
 import { createConfig, http } from 'wagmi'
 import { mainnet, celo, base } from 'wagmi/chains'
 import { injected, walletConnect } from 'wagmi/connectors'
+import { farcasterMiniApp } from '@farcaster/miniapp-wagmi-connector'
 import { config } from './config'
 
 export const wagmiConfig = createConfig({
   chains: [mainnet, celo, base],
   connectors: [
+    // Farcaster Mini App connector (prioritario en Mini Apps)
+    farcasterMiniApp(),
     injected(),
     ...(config.wallet.projectId ? [walletConnect({ projectId: config.wallet.projectId })] : [])
   ],

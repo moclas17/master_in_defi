@@ -156,8 +156,7 @@ export function SelfProvider({ children }: { children: ReactNode }) {
     try {
       // Intentar abrir en Farcaster si está disponible
       try {
-        // @ts-ignore - SDK puede no estar instalado
-        const { sdk } = await import('@farcaster/frame-sdk')
+        const { sdk } = await import('@farcaster/miniapp-sdk')
         const isInMiniAppResult = await sdk.isInMiniApp()
         
         if (isInMiniAppResult) {

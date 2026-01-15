@@ -55,11 +55,8 @@ export function SelfWidget({
   const [linkCopied, setLinkCopied] = useState(false)
   const [showQR, setShowQR] = useState(showQRCode)
 
-  // No mostrar si no hay wallet conectada
-  // Durante SSR, isConnected será false, así que no hay problema de hidratación
-  if (!isConnected) {
-    return null
-  }
+  // En Farcaster Mini Apps, permitir mostrar el widget incluso sin wallet conectada
+  // El usuario puede conectar su wallet después para iniciar la verificación
 
   const copyToClipboard = () => {
     if (!universalLink) return
@@ -132,6 +129,7 @@ export function SelfWidget({
         linkCopied={linkCopied}
         selfApp={selfApp}
         showQR={showQR}
+        isConnected={isConnected}
         onVerify={initiateSelfVerification}
         onCopy={copyToClipboard}
         onClear={clearVerification}
@@ -153,6 +151,7 @@ function WidgetContent({
   linkCopied,
   selfApp,
   showQR,
+  isConnected,
   onVerify,
   onCopy,
   onClear,
@@ -168,6 +167,7 @@ function WidgetContent({
   linkCopied: boolean
   selfApp: SelfApp | null
   showQR: boolean
+  isConnected: boolean
   onVerify: () => void
   onCopy: () => void
   onClear: () => void
@@ -277,8 +277,20 @@ function WidgetContent({
         </div>
       )}
 
-      {/* Botones */}
-      {!showQR && (
+      {/* Mensaje si no hay wallet conectada */}
+      {!isConnected && (
+        <div className="p-4 border border-blue-500/50 bg-blue-900/20 rounded-lg">
+          <p className="text-sm text-zinc-300 mb-3">
+            Para verificar con Self Protocol, primero necesitas conectar tu wallet.
+          </p>
+          <p className="text-xs text-zinc-400">
+            Usa la opción "Wallet Signature" para conectar tu wallet de Farcaster.
+          </p>
+        </div>
+      )}
+
+      {/* Botones - Solo mostrar si hay wallet conectada */}
+      {isConnected && !showQR && (
         <Button
           onClick={onVerify}
           disabled={isVerifying || !universalLink}
@@ -289,6 +301,11 @@ function WidgetContent({
               <Spinner size="sm" className="mr-2" />
               Esperando verificación...
             </>
+          ) : !universalLink ? (
+            <>
+              <Spinner size="sm" className="mr-2" />
+              Inicializando...
+            </>
           ) : (
             <>
               <span className="mr-2">🛡️</span>
@@ -298,7 +315,8 @@ function WidgetContent({
         </Button>
       )}
 
-      {universalLink && !isVerifying && (
+      {/* Botones de QR y copiar - Solo si hay wallet y universalLink */}
+      {isConnected && universalLink && !isVerifying && (
         <div className="space-y-2">
           <Button
             onClick={onToggleQR}
@@ -363,6 +381,7 @@ function ContractVerificationContent({
   const connections = useConnections()
   const activeConnection = connections[0]
   const address = activeConnection?.accounts?.[0] as `0x${string}` | undefined
+  const isConnected = connections.length > 0 && !!address
 
   const contractAddress = config.self.contractAddress
   const contractChain = config.self.endpointType
@@ -418,6 +437,7 @@ function ContractVerificationContent({
         linkCopied={linkCopied}
         selfApp={selfApp}
         showQR={showQR}
+        isConnected={isConnected}
         onVerify={onVerify}
         onCopy={onCopy}
         onClear={onClear}
