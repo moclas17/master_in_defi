@@ -5,10 +5,10 @@
  * Basado en ConnectHub: https://github.com/ArturVargas/ConnectHub
  */
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useSelf } from '@/contexts/SelfContext'
 import { useFarcaster } from '@/contexts/FarcasterContext'
-import { useConnections } from 'wagmi'
+import { useConnections, useConnect, useConnectors } from 'wagmi'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
@@ -32,6 +32,9 @@ export function SelfWidget({
   const activeConnection = connections[0]
   const isConnected = connections.length > 0 && !!activeConnection?.accounts?.[0]
   
+  const connect = useConnect()
+  const connectors = useConnectors()
+  
   const { isConnected: isAuthenticated } = useFarcaster()
   const {
     isVerified,
@@ -54,6 +57,16 @@ export function SelfWidget({
 
   const [linkCopied, setLinkCopied] = useState(false)
   const [showQR, setShowQR] = useState(showQRCode)
+
+  // Handler para conectar wallet desde Self Protocol
+  const handleConnectWallet = useCallback(() => {
+    // En Farcaster Mini Apps, priorizar el connector de Farcaster
+    const farcasterConnector = connectors.find(c => c.id === 'farcasterMiniApp' || c.id === 'farcasterFrame')
+    const connector = farcasterConnector || connectors[0]
+    if (connector) {
+      connect.mutate({ connector })
+    }
+  }, [connectors, connect])
 
   // En Farcaster Mini Apps, permitir mostrar el widget incluso sin wallet conectada
   // El usuario puede conectar su wallet después para iniciar la verificación
@@ -130,11 +143,13 @@ export function SelfWidget({
         selfApp={selfApp}
         showQR={showQR}
         isConnected={isConnected}
+        isConnecting={connect.isPending}
         onVerify={initiateSelfVerification}
         onCopy={copyToClipboard}
         onClear={clearVerification}
         onToggleQR={() => setShowQR(!showQR)}
         onVerificationSuccess={handleVerificationSuccess}
+        onConnectWallet={handleConnectWallet}
         isAuthenticated={isAuthenticated}
       />
     </Card>
@@ -152,11 +167,13 @@ function WidgetContent({
   selfApp,
   showQR,
   isConnected,
+  isConnecting,
   onVerify,
   onCopy,
   onClear,
   onToggleQR,
   onVerificationSuccess,
+  onConnectWallet,
   isAuthenticated
 }: {
   isVerified: boolean
@@ -168,11 +185,13 @@ function WidgetContent({
   selfApp: SelfApp | null
   showQR: boolean
   isConnected: boolean
+  isConnecting: boolean
   onVerify: () => void
   onCopy: () => void
   onClear: () => void
   onToggleQR: () => void
   onVerificationSuccess: (data?: SelfVerificationData) => void
+  onConnectWallet: () => void
   isAuthenticated: boolean
 }) {
   if (isVerified && verificationData) {
@@ -277,15 +296,34 @@ function WidgetContent({
         </div>
       )}
 
-      {/* Mensaje si no hay wallet conectada */}
+      {/* Mensaje y botón si no hay wallet conectada */}
       {!isConnected && (
-        <div className="p-4 border border-blue-500/50 bg-blue-900/20 rounded-lg">
-          <p className="text-sm text-zinc-300 mb-3">
-            Para verificar con Self Protocol, primero necesitas conectar tu wallet.
-          </p>
-          <p className="text-xs text-zinc-400">
-            Usa la opción "Wallet Signature" para conectar tu wallet de Farcaster.
-          </p>
+        <div className="space-y-3">
+          <div className="p-4 border border-blue-500/50 bg-blue-900/20 rounded-lg">
+            <p className="text-sm text-zinc-300 mb-2">
+              Para verificar con Self Protocol, primero necesitas conectar tu wallet de Farcaster.
+            </p>
+            <p className="text-xs text-zinc-400">
+              Conecta tu wallet para generar el QR code y comenzar la verificación.
+            </p>
+          </div>
+          <Button
+            onClick={onConnectWallet}
+            disabled={isConnecting}
+            className="w-full"
+          >
+            {isConnecting ? (
+              <>
+                <Spinner size="sm" className="mr-2" />
+                Conectando...
+              </>
+            ) : (
+              <>
+                <span className="mr-2">🔗</span>
+                Conectar Wallet de Farcaster
+              </>
+            )}
+          </Button>
         </div>
       )}
 
@@ -382,6 +420,17 @@ function ContractVerificationContent({
   const activeConnection = connections[0]
   const address = activeConnection?.accounts?.[0] as `0x${string}` | undefined
   const isConnected = connections.length > 0 && !!address
+  
+  const connect = useConnect()
+  const connectors = useConnectors()
+  
+  const handleConnectWallet = useCallback(() => {
+    const farcasterConnector = connectors.find(c => c.id === 'farcasterMiniApp' || c.id === 'farcasterFrame')
+    const connector = farcasterConnector || connectors[0]
+    if (connector) {
+      connect.mutate({ connector })
+    }
+  }, [connectors, connect])
 
   const contractAddress = config.self.contractAddress
   const contractChain = config.self.endpointType
@@ -438,11 +487,13 @@ function ContractVerificationContent({
         selfApp={selfApp}
         showQR={showQR}
         isConnected={isConnected}
+        isConnecting={connect.isPending}
         onVerify={onVerify}
         onCopy={onCopy}
         onClear={onClear}
         onToggleQR={onToggleQR}
         onVerificationSuccess={onVerificationSuccess}
+        onConnectWallet={handleConnectWallet}
         isAuthenticated={isAuthenticated}
       />
 
