@@ -8,7 +8,7 @@ export const QUIZ_CONFIG = {
   MIN_SCORE_TO_PASS: 3,
   TOKEN_EXPIRATION_MINUTES: 10,
   VERIFICATION_EXPIRATION_DAYS: 30,
-  MIN_TIME_PER_QUESTION: 5, // segundos mínimos por pregunta (anti-cheat)
+  MIN_TIME_PER_QUESTION: 2, // segundos mínimos por pregunta (anti-cheat) - reducido de 5 a 2 para ser más flexible
 } as const
 
 export const STORAGE_KEYS = {

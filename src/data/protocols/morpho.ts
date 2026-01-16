@@ -31,5 +31,6 @@ export const morpho: Protocol = {
     'Riesgo de mercado aislado',
     'Dependencia de oráculos'
   ],
-  secretWord: 'EFFICIENT_LIQUIDITY_88'
+  secretWord: 'EFFICIENT_LIQUIDITY_88',
+  poapEventId: 0 // Configurar en .env como POAP_EVENT_ID_MORPHO
 }

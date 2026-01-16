@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { Badge } from '@/components/ui/Badge'
 import { QUIZ_CONFIG, ERROR_MESSAGES } from '@/lib/constants'
 import { useVerification } from '@/contexts/VerificationContext'
+import { POAPClaimButton } from '@/components/poap/POAPClaimButton'
 
 interface QuizResults {
   score: number
@@ -150,6 +151,18 @@ export default function QuizResultsPage() {
                   </div>
                 </div>
               )}
+
+              {/* POAP Claim Section */}
+              <div className="mb-8">
+                <POAPClaimButton
+                  token={token || ''}
+                  protocolId={protocolId}
+                  walletAddress={contextVerification.walletAddress}
+                  onSuccess={(claimUrl) => {
+                    console.log('POAP claimed:', claimUrl)
+                  }}
+                />
+              </div>
 
               {/* Action Button */}
               <div className="flex justify-center">

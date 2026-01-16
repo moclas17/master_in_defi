@@ -29,4 +29,17 @@ export const config = {
     timePerQuestion: 25,
     minScoreToPass: 3,
   },
+  poap: {
+    apiKey: process.env.POAP_API_KEY || '',
+    clientId: process.env.POAP_CLIENT_ID || '',
+    clientSecret: process.env.POAP_CLIENT_SECRET || '',
+    eventIds: {
+      aave: parseInt(process.env.POAP_EVENT_ID_AAVE || '0'),
+      morpho: parseInt(process.env.POAP_EVENT_ID_MORPHO || '0'),
+      sablier: parseInt(process.env.POAP_EVENT_ID_SABLIER || '0'),
+    }
+  },
+  database: {
+    url: process.env.DATABASE_URL || '',
+  },
 } as const

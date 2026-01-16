@@ -88,7 +88,7 @@ export function VerificationProvider({ children }: { children: ReactNode }) {
         isVerified,
         verificationMethod,
         verificationId: verificationData?.verificationId,
-        walletAddress: walletVerified ? address : undefined,
+        walletAddress: address, // Devolver address siempre que esté conectada, no solo si está verificada
         isLoading,
       }}
     >

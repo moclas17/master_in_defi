@@ -18,7 +18,7 @@ export default function Home() {
               DEFI INTELLIGENCE HUB
             </Badge>
           </div>
-          
+
           {/* Title with gradient */}
           <h1 className="bg-gradient-to-b from-white to-zinc-400 bg-clip-text text-6xl font-bold text-transparent md:text-7xl">
             DeFi Mastery

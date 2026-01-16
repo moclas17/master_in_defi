@@ -18,19 +18,28 @@ interface WalletSignatureButtonProps {
   message?: string
 }
 
-function WalletSignatureButtonComponent({ 
+function WalletSignatureButtonComponent({
   onVerified,
   message = 'Verifico que soy el propietario de esta wallet para acceder al quiz Master en DeFi'
 }: WalletSignatureButtonProps) {
   const connections = useConnections()
-  // En Wagmi v2, useConnections retorna conexiones activas
+  // En Wagmi v3, useConnections retorna conexiones activas
   const activeConnection = connections[0] // Primera conexión activa
   const address = activeConnection?.accounts?.[0] as `0x${string}` | undefined
   const isConnected = connections.length > 0 && !!address
-  
+
   const connect = useConnect()
   const connectors = useConnectors()
   const disconnect = useDisconnect()
+
+  // Debug logging
+  console.log('WalletSignatureButton render:', {
+    connections: connections.length,
+    isConnected,
+    address,
+    availableConnectors: connectors.map(c => ({ id: c.id, name: c.name })),
+    connectPending: connect.isPending
+  })
   const signMessage = useSignMessage({
     mutation: {
       onSuccess: async (signature: `0x${string}`) => {
@@ -67,11 +76,24 @@ function WalletSignatureButtonComponent({
   })
 
   const handleConnect = useCallback(() => {
-    // En Farcaster Mini Apps, priorizar el connector de Farcaster
-    // Si está disponible, usarlo; sino usar el primero disponible
-    const farcasterConnector = connectors.find(c => c.id === 'farcasterMiniApp' || c.id === 'farcasterFrame')
-    const connector = farcasterConnector || connectors[0] || injected()
-    connect.mutate({ connector })
+    // Prioridad de connectors:
+    // 1. Injected (MetaMask, Coinbase Wallet, etc.) - para uso normal
+    // 2. WalletConnect - para wallets móviles
+    // 3. Farcaster - solo en Farcaster Mini Apps
+
+    const injectedConnector = connectors.find(c => c.id === 'injected')
+    const walletConnectConnector = connectors.find(c => c.id === 'walletConnect')
+    const farcasterConnector = connectors.find(c => c.id === 'farcasterMiniApp' || c.id === 'farcaster')
+
+    // Usar injected primero (MetaMask, etc.)
+    const connector = injectedConnector || walletConnectConnector || farcasterConnector || connectors[0]
+
+    if (connector) {
+      console.log('Connecting with connector:', connector.id, connector.name)
+      connect.mutate({ connector })
+    } else {
+      console.error('No connector available, connectors:', connectors)
+    }
   }, [connectors, connect])
 
   const handleSign = useCallback(() => {
@@ -81,11 +103,12 @@ function WalletSignatureButtonComponent({
   }, [address, signMessage, message])
 
   const handleDisconnect = useCallback(() => {
-    disconnect.mutate()
+    console.log('Disconnecting wallet...')
     if (address) {
       localStorage.removeItem(STORAGE_KEYS.WALLET_VERIFIED(address))
       localStorage.removeItem(STORAGE_KEYS.WALLET_SIGNATURE(address))
     }
+    disconnect.disconnect()
   }, [disconnect, address])
 
   if (signMessage.isSuccess && address) {

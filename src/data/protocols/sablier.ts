@@ -31,5 +31,6 @@ export const sablier: Protocol = {
     'Riesgo de cancelación (si es cancelable)',
     'Dependencia de la blockchain'
   ],
-  secretWord: 'FLOW_STATE_SABLIER'
+  secretWord: 'FLOW_STATE_SABLIER',
+  poapEventId: 0 // Configurar en .env como POAP_EVENT_ID_SABLIER
 }
