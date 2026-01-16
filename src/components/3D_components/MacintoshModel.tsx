@@ -7,6 +7,7 @@
 
 import { useMemo } from 'react'
 import { Box, RoundedBox, Text } from '@react-three/drei'
+import { PlaneGeometry } from 'three'
 import { usePlasticTextures } from './textures'
 
 // Colores según especificaciones
@@ -85,18 +86,81 @@ export function MacintoshModel({ showDetails = false }: MacintoshModelProps) {
     aoMapIntensity: 0.5,
   }), [bezelTextures])
 
-  const screenMaterialProps = {
-    color: COLORS.screen,
-    roughness: 0.9,
-    metalness: 0.0,
-    emissive: '#000000',
-  }
+  // Geometría de pantalla con curvatura sutil (típica de CRT)
+  // Las pantallas CRT tienen una curvatura convexa hacia afuera, más pronunciada en los bordes
+  const curvedScreenGeometry = useMemo(() => {
+    const width = DIMENSIONS.screenWidth
+    const height = DIMENSIONS.screenHeight
+    const widthSegments = 32
+    const heightSegments = 32
+    
+    // Crear geometría de plano
+    const geometry = new PlaneGeometry(width, height, widthSegments, heightSegments)
+    const positions = geometry.attributes.position
+    
+    // Aplicar curvatura sutil hacia afuera (convex) típica de CRT
+    // La curvatura es más pronunciada en los bordes (como en pantallas CRT reales)
+    const maxCurvature = 0.003 // Curvatura máxima en los bordes (3mm)
+    
+    for (let i = 0; i < positions.count; i++) {
+      const x = positions.getX(i)
+      const y = positions.getY(i)
+      
+      // Calcular distancia desde el centro (normalizada de 0 a 1)
+      const nx = (x / (width / 2))
+      const ny = (y / (height / 2))
+      const dist = Math.sqrt(nx * nx + ny * ny)
+      
+      // Aplicar curvatura con función cuadrática (más pronunciada en bordes)
+      // Usar clamp para evitar valores fuera de rango
+      const clampedDist = Math.min(1, dist)
+      const z = Math.pow(clampedDist, 2.5) * maxCurvature
+      positions.setZ(i, z)
+    }
+    
+    // Recalcular normales para que la iluminación sea correcta
+    geometry.computeVertexNormals()
+    
+    return geometry
+  }, [])
 
-  const floppySlotMaterialProps = {
+  // Material de pantalla CRT con propiedades de vidrio
+  const screenMaterialProps = useMemo(() => ({
+    color: COLORS.screen,
+    roughness: 0.1, // Vidrio liso
+    metalness: 0.0,
+    // Propiedades de vidrio
+    transmission: 0.1, // Ligera transparencia (permite ver reflejos)
+    thickness: DIMENSIONS.screenDepth, // Grosor del vidrio
+    ior: 1.5, // Índice de refracción del vidrio
+    envMapIntensity: 0.3, // Reflejos sutiles del entorno
+    // Emissive para cuando muestre contenido (se puede ajustar dinámicamente)
+    emissive: '#000000',
+    emissiveIntensity: 0,
+  }), [])
+
+  // Material mejorado para la ranura de disquete (más metálico y reflectante)
+  const floppySlotMaterialProps = useMemo(() => ({
     color: COLORS.floppySlot,
-    roughness: 0.3,
-    metalness: 0.7,
-  }
+    roughness: 0.2, // Más brillante (reducido de 0.3)
+    metalness: 0.9, // Más metálico (aumentado de 0.7)
+    envMapIntensity: 0.8, // Reflejos más pronunciados
+  }), [])
+
+  // Material para el interior de la ranura (más oscuro, simula profundidad)
+  const floppySlotInteriorMaterialProps = useMemo(() => ({
+    color: '#2a2a2a', // Negro mate para simular profundidad
+    roughness: 0.9,
+    metalness: 0.1,
+  }), [])
+
+  // Material para detalles internos (partes metálicas)
+  const floppySlotDetailMaterialProps = useMemo(() => ({
+    color: '#606060', // Gris metálico más claro
+    roughness: 0.1,
+    metalness: 0.8,
+    envMapIntensity: 1.0,
+  }), [])
 
   const baseMaterialProps = useMemo(() => ({
     color: COLORS.base,
@@ -159,21 +223,75 @@ export function MacintoshModel({ showDetails = false }: MacintoshModelProps) {
         <meshPhysicalMaterial {...screenBezelMaterialProps} />
       </Box>
 
-      {/* Pantalla CRT - Aquí se renderizará el contenido del protocolo */}
-      <Box
-        args={[DIMENSIONS.screenWidth, DIMENSIONS.screenHeight, DIMENSIONS.screenDepth]}
+      {/* Pantalla CRT con curvatura y propiedades de vidrio */}
+      <mesh
+        geometry={curvedScreenGeometry}
         position={[0, 0.03, 0.076]}
+        rotation={[0, 0, 0]}
       >
-        <meshStandardMaterial {...screenMaterialProps} />
-      </Box>
+        <meshPhysicalMaterial {...screenMaterialProps} />
+      </mesh>
 
-      {/* Ranura de Disquete */}
-      <Box
-        args={[DIMENSIONS.floppyWidth, DIMENSIONS.floppyHeight, DIMENSIONS.floppyDepth]}
-        position={[0, -0.048, 0.076]}
-      >
-        <meshStandardMaterial {...floppySlotMaterialProps} />
-      </Box>
+      {/* Ranura de Disquete Detallada */}
+      <group position={[0, -0.048, 0.076]}>
+        {/* Marco exterior de la ranura (metálico brillante) */}
+        <Box
+          args={[DIMENSIONS.floppyWidth, DIMENSIONS.floppyHeight, DIMENSIONS.floppyDepth]}
+          position={[0, 0, 0]}
+        >
+          <meshPhysicalMaterial {...floppySlotMaterialProps} />
+        </Box>
+
+        {/* Interior de la ranura (hueco oscuro para simular profundidad) */}
+        <Box
+          args={[
+            DIMENSIONS.floppyWidth * 0.85, // Ligeramente más estrecho
+            DIMENSIONS.floppyHeight * 0.5,  // Más bajo (simula profundidad)
+            DIMENSIONS.floppyDepth * 1.5    // Más profundo
+          ]}
+          position={[0, -DIMENSIONS.floppyHeight * 0.25, -DIMENSIONS.floppyDepth * 0.25]}
+        >
+          <meshStandardMaterial {...floppySlotInteriorMaterialProps} />
+        </Box>
+
+        {/* Detalle interno: Parte metálica superior (simula mecanismo) */}
+        <Box
+          args={[
+            DIMENSIONS.floppyWidth * 0.7,
+            0.0005, // Muy delgado
+            DIMENSIONS.floppyDepth * 0.8
+          ]}
+          position={[0, DIMENSIONS.floppyHeight * 0.2, -DIMENSIONS.floppyDepth * 0.1]}
+        >
+          <meshPhysicalMaterial {...floppySlotDetailMaterialProps} />
+        </Box>
+
+        {/* Detalle interno: Parte metálica inferior (simula resorte/mecanismo) */}
+        <Box
+          args={[
+            DIMENSIONS.floppyWidth * 0.6,
+            0.0005, // Muy delgado
+            DIMENSIONS.floppyDepth * 0.6
+          ]}
+          position={[0, -DIMENSIONS.floppyHeight * 0.3, -DIMENSIONS.floppyDepth * 0.2]}
+        >
+          <meshPhysicalMaterial {...floppySlotDetailMaterialProps} />
+        </Box>
+
+        {/* Bordes internos de la ranura (simula guías) */}
+        <Box
+          args={[0.001, DIMENSIONS.floppyHeight * 0.4, DIMENSIONS.floppyDepth * 1.2]}
+          position={[-DIMENSIONS.floppyWidth * 0.4, -DIMENSIONS.floppyHeight * 0.2, -DIMENSIONS.floppyDepth * 0.3]}
+        >
+          <meshPhysicalMaterial {...floppySlotDetailMaterialProps} />
+        </Box>
+        <Box
+          args={[0.001, DIMENSIONS.floppyHeight * 0.4, DIMENSIONS.floppyDepth * 1.2]}
+          position={[DIMENSIONS.floppyWidth * 0.4, -DIMENSIONS.floppyHeight * 0.2, -DIMENSIONS.floppyDepth * 0.3]}
+        >
+          <meshPhysicalMaterial {...floppySlotDetailMaterialProps} />
+        </Box>
+      </group>
 
       {/* Logotipo de Apple - Parte inferior izquierda del frente */}
       {/* Símbolo de Apple estilizado - usando texto con símbolo Unicode */}

@@ -7,6 +7,7 @@
 
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei'
+import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing'
 import { MacintoshModel } from './MacintoshModel'
 
 interface MacintoshSceneProps {
@@ -76,6 +77,24 @@ export function MacintoshScene({
 
         {/* Modelo del Macintosh */}
         <MacintoshModel showDetails={showDetails} />
+
+        {/* Post-Processing: Efectos visuales avanzados */}
+        <EffectComposer>
+          {/* Bloom: Efecto de brillo suave en áreas luminosas */}
+          <Bloom
+            intensity={0.3} // Intensidad del bloom (sutil)
+            luminanceThreshold={0.9} // Solo áreas muy brillantes emiten bloom
+            luminanceSmoothing={0.9} // Suavizado del bloom
+            height={300} // Altura del render target (optimización)
+          />
+
+          {/* Vignette: Oscurecimiento sutil en los bordes para enfoque */}
+          <Vignette
+            eskil={false} // No usar técnica eskil
+            offset={0.1} // Offset del efecto
+            darkness={0.5} // Intensidad del oscurecimiento
+          />
+        </EffectComposer>
       </Canvas>
     </div>
   )
