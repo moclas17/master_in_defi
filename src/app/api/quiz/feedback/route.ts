@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getQuestionsByProtocol } from '@/data/questions'
+import { getQuestionsByProtocol } from '@/lib/db/questions'
 
 /**
  * API Route para obtener feedback después de responder
  * Solo devuelve si la respuesta es correcta y la explicación
+ * ACTUALIZADO: Ahora usa base de datos en lugar de archivos hardcodeados
  */
 export async function POST(request: NextRequest) {
   try {
@@ -17,8 +18,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Obtener preguntas
-    const questions = getQuestionsByProtocol(protocolId)
+    // Obtener preguntas (ahora desde BD)
+    const questions = await getQuestionsByProtocol(protocolId, false)
     const question = questions.find(q => q.id === questionId)
 
     if (!question) {

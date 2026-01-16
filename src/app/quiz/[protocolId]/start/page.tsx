@@ -10,6 +10,16 @@ import { useErrorHandler } from '@/hooks/useErrorHandler'
 import { ErrorAlert } from '@/components/ui/ErrorAlert'
 import { useVerification } from '@/contexts/VerificationContext'
 
+// Función para mezclar un array (Fisher-Yates shuffle)
+function shuffleArray<T>(array: T[]): T[] {
+  const shuffled = [...array]
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+  }
+  return shuffled
+}
+
 export default function QuizStartPage() {
   const params = useParams()
   const router = useRouter()
@@ -20,7 +30,7 @@ export default function QuizStartPage() {
   const [answerFeedback, setAnswerFeedback] = useState<Record<string, AnswerFeedback>>({})
   const [quizStarted, setQuizStarted] = useState(false)
   const { error: apiError, handleError, clearError } = useErrorHandler()
-  const { verificationMethod } = useVerification()
+  const { verificationMethod, walletAddress } = useVerification()
 
   const {
     currentQuestion,
@@ -48,7 +58,14 @@ export default function QuizStartPage() {
           throw new Error(ERROR_MESSAGES.NETWORK_ERROR)
         }
         const data = await response.json()
-        setQuestions(data.questions)
+
+        // Mezclar las respuestas de cada pregunta
+        const questionsWithShuffledAnswers = data.questions.map((question: SafeQuestion) => ({
+          ...question,
+          answers: shuffleArray(question.answers)
+        }))
+
+        setQuestions(questionsWithShuffledAnswers)
         setLoading(false)
         clearError()
       } catch (error) {
@@ -333,7 +350,9 @@ export default function QuizStartPage() {
                           answers: finalAnswers,
                           startTime: quizState.startTime,
                           endTime: Date.now(),
-                          verificationMethod: verificationMethod || null
+                          verificationMethod: verificationMethod || null,
+                          walletAddress: walletAddress || null,
+                          email: null // Opcional: agregar email si se captura
                         })
                       })
                       

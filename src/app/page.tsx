@@ -1,9 +1,23 @@
 import { Badge } from '@/components/ui/Badge'
-import { protocols } from '@/data/protocols'
-import { questions } from '@/data/questions'
+import { getAllProtocols } from '@/lib/db/protocols'
+import { getQuestionsByProtocol } from '@/lib/db/questions'
 import Link from 'next/link'
 
-export default function Home() {
+export default async function Home() {
+  // Fetch protocols from database
+  const protocols = await getAllProtocols()
+
+  // Get question counts for each protocol
+  const protocolsWithCounts = await Promise.all(
+    protocols.map(async (protocol) => {
+      const questions = await getQuestionsByProtocol(protocol.id, false)
+      return {
+        ...protocol,
+        questionCount: questions.length
+      }
+    })
+  )
+
   return (
     <div className="min-h-screen bg-black p-8 font-sans">
       <main className="mx-auto max-w-7xl">
@@ -15,7 +29,7 @@ export default function Home() {
               DEFI INTELLIGENCE HUB
             </Badge>
           </div>
-          
+
           {/* Title with gradient */}
           <h1 className="bg-gradient-to-b from-white to-zinc-400 bg-clip-text text-6xl font-bold text-transparent md:text-7xl">
             DeFi Mastery
@@ -24,9 +38,8 @@ export default function Home() {
 
         {/* Protocol Cards Grid */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {protocols.map((protocol) => {
-            const protocolQuestions = questions.filter(q => q.protocol === protocol.id)
-            const questionCount = protocolQuestions.length
+          {protocolsWithCounts.map((protocol) => {
+            const questionCount = protocol.questionCount
             
             return (
               <Link

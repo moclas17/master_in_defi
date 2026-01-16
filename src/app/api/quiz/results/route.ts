@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getProtocolById } from '@/data/protocols'
+import { getProtocolById } from '@/lib/db/protocols'
 import { getQuizToken, deleteQuizToken } from '@/lib/quiz-tokens'
 import { QUIZ_CONFIG, ERROR_MESSAGES } from '@/lib/constants'
 
@@ -16,8 +16,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Validar token (incluye verificación de expiración)
-    const tokenData = getQuizToken(token)
-    
+    const tokenData = await getQuizToken(token)
+
     if (!tokenData) {
       return NextResponse.json(
         { error: ERROR_MESSAGES.INVALID_TOKEN },
@@ -25,8 +25,8 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Obtener protocolo
-    const protocol = getProtocolById(tokenData.protocolId)
+    // Obtener protocolo (ahora desde BD)
+    const protocol = await getProtocolById(tokenData.protocolId)
     if (!protocol) {
       return NextResponse.json(
         { error: 'Protocol not found' },
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
       score: tokenData.score,
       total: tokenData.total,
       passed,
-      secretWord: passed ? protocol.secretWord : null,
+      secretWord: passed ? (protocol.secretWord || null) : null,
       protocolName: protocol.title || protocol.name,
       verificationMethod: tokenData.verificationMethod || null
     })

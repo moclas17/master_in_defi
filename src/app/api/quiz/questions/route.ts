@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getQuestionsByProtocol } from '@/data/questions'
-import { getProtocolById } from '@/data/protocols'
+import { getQuestionsByProtocol } from '@/lib/db/questions'
+import { getProtocolById } from '@/lib/db/protocols'
 
 /**
  * API Route para obtener preguntas SIN respuestas correctas
  * Esto previene web scraping de las respuestas
+ * ACTUALIZADO: Ahora usa base de datos en lugar de archivos hardcodeados
  */
 export async function GET(request: NextRequest) {
   try {
@@ -18,8 +19,8 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Validar que el protocolo existe
-    const protocol = getProtocolById(protocolId)
+    // Validar que el protocolo existe (ahora desde BD)
+    const protocol = await getProtocolById(protocolId)
     if (!protocol) {
       return NextResponse.json(
         { error: 'Protocol not found' },
@@ -27,9 +28,9 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Obtener preguntas
-    const questions = getQuestionsByProtocol(protocolId)
-    
+    // Obtener preguntas (ahora desde BD, solo activas)
+    const questions = await getQuestionsByProtocol(protocolId, false)
+
     if (questions.length === 0) {
       return NextResponse.json(
         { error: 'No questions found' },
@@ -41,9 +42,6 @@ export async function GET(request: NextRequest) {
     const safeQuestions = questions.map((question) => ({
       id: question.id,
       text: question.text,
-      category: question.category,
-      difficulty: question.difficulty,
-      protocol: question.protocol,
       // Respuestas SIN isCorrect ni explanation
       answers: question.answers.map((answer) => ({
         id: answer.id,

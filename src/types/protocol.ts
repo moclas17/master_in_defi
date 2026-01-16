@@ -27,6 +27,7 @@ export interface Protocol {
   features: string[]
   risks?: string[]
   secretWord?: string // Palabra secreta del protocolo (para gamificación)
+  poapEventId?: number // ID del evento POAP para este protocolo
 }
 
 export interface ProtocolStats {
