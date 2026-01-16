@@ -31,16 +31,22 @@ export function MacintoshScene({
         dpr={[1, 2]} // Device pixel ratio (1 para móviles, 2 para desktop)
         style={{ width: '100%', height: '100%' }}
       >
+        {/* Fondo negro */}
+        <color attach="background" args={['black']} />
+
         {/* Iluminación según especificaciones */}
         {/* Luz Ambiental */}
-        <ambientLight intensity={0.4} color="#ffffff" />
+        <ambientLight intensity={0.15} color="#ffffff" />
 
-        {/* Luz Direccional Principal */}
-        <directionalLight
-          position={[5, 5, 5]}
-          intensity={0.8}
-          color="#ffffff"
+        {/* Luz Direccional Principal (spotlight para sombras) */}
+        <spotLight
+          decay={0}
+          position={[10, 20, 10]}
+          angle={0.12}
+          penumbra={1}
+          intensity={0.6} // Intensidad reducida
           castShadow={false}
+          shadow-mapSize={1024}
         />
 
         {/* Luz Direccional de Relleno */}
@@ -49,9 +55,6 @@ export function MacintoshScene({
           intensity={0.3}
           color="#ffffff"
         />
-
-        {/* Luz Puntual (Opcional) */}
-        <pointLight position={[0, 3, 3]} intensity={0.5} color="#ffffff" />
 
         {/* Cámara según especificaciones */}
         <PerspectiveCamera
@@ -80,12 +83,12 @@ export function MacintoshScene({
 
         {/* Post-Processing: Efectos visuales avanzados */}
         <EffectComposer>
-          {/* Bloom: Efecto de brillo suave en áreas luminosas */}
+          {/* Bloom: Efecto de brillo suave en áreas luminosas (más intenso como en el CodeSandbox) */}
           <Bloom
-            intensity={0.3} // Intensidad del bloom (sutil)
-            luminanceThreshold={0.9} // Solo áreas muy brillantes emiten bloom
-            luminanceSmoothing={0.9} // Suavizado del bloom
-            height={300} // Altura del render target (optimización)
+            luminanceThreshold={0} // Sin umbral para que todo brille
+            mipmapBlur
+            luminanceSmoothing={0.0}
+            intensity={5} // Intensidad alta como en el ejemplo
           />
 
           {/* Vignette: Oscurecimiento sutil en los bordes para enfoque */}
