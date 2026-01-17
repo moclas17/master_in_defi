@@ -28,6 +28,7 @@ export function ProtocolsListView() {
   const [protocols, setProtocols] = useState<Protocol[]>([])
   const [loading, setLoading] = useState(true)
   const [showAddForm, setShowAddForm] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     id: '',
     name: '',
@@ -86,8 +87,11 @@ export function ProtocolsListView() {
         return
       }
 
-      const response = await fetch('/api/protocols', {
-        method: 'POST',
+      const url = editingId ? `/api/protocols/${editingId}` : '/api/protocols'
+      const method = editingId ? 'PUT' : 'POST'
+
+      const response = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
           'x-admin-secret': adminSecret,
@@ -98,7 +102,7 @@ export function ProtocolsListView() {
       const data = await response.json()
 
       if (response.ok) {
-        setMessage(`✓ Protocolo "${formData.name}" creado exitosamente`)
+        setMessage(`✓ Protocolo "${formData.name}" ${editingId ? 'actualizado' : 'creado'} exitosamente`)
         setFormData({
           id: '',
           name: '',
@@ -113,16 +117,55 @@ export function ProtocolsListView() {
           orderIndex: 0,
         })
         setShowAddForm(false)
+        setEditingId(null)
         fetchProtocols()
       } else {
-        setMessage(`✗ Error: ${data.error || 'Failed to create protocol'}`)
+        setMessage(`✗ Error: ${data.error || 'Failed to save protocol'}`)
       }
     } catch (error) {
-      setMessage('✗ Error al crear protocolo')
+      setMessage('✗ Error al guardar protocolo')
       console.error(error)
     } finally {
       setSubmitting(false)
     }
+  }
+
+  const handleEdit = (protocol: Protocol) => {
+    setEditingId(protocol.id)
+    setFormData({
+      id: protocol.id,
+      name: protocol.name,
+      title: protocol.title || '',
+      description: protocol.description || '',
+      logoUrl: protocol.logoUrl || '',
+      category: protocol.category || 'lending',
+      difficulty: protocol.difficulty || 'intermediate',
+      secretWord: protocol.secretWord || '',
+      status: protocol.status,
+      active: protocol.active,
+      orderIndex: protocol.orderIndex,
+    })
+    setShowAddForm(true)
+    setMessage('')
+  }
+
+  const cancelEdit = () => {
+    setEditingId(null)
+    setShowAddForm(false)
+    setFormData({
+      id: '',
+      name: '',
+      title: '',
+      description: '',
+      logoUrl: '',
+      category: 'lending',
+      difficulty: 'intermediate',
+      secretWord: '',
+      status: 'public',
+      active: true,
+      orderIndex: 0,
+    })
+    setMessage('')
   }
 
   const toggleProtocolStatus = async (protocolId: string, currentStatus: 'public' | 'draft') => {
@@ -176,15 +219,17 @@ export function ProtocolsListView() {
         <h2 className="text-2xl font-bold text-white">
           Protocolos ({protocols.length})
         </h2>
-        <Button onClick={() => setShowAddForm(!showAddForm)}>
+        <Button onClick={() => showAddForm ? cancelEdit() : setShowAddForm(true)}>
           {showAddForm ? 'Cancelar' : '+ Agregar Protocolo'}
         </Button>
       </div>
 
-      {/* Add Protocol Form */}
+      {/* Add/Edit Protocol Form */}
       {showAddForm && (
         <Card className="p-6">
-          <h3 className="text-lg font-semibold text-white mb-4">Nuevo Protocolo</h3>
+          <h3 className="text-lg font-semibold text-white mb-4">
+            {editingId ? 'Editar Protocolo' : 'Nuevo Protocolo'}
+          </h3>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -199,7 +244,12 @@ export function ProtocolsListView() {
                   className={inputClass}
                   placeholder="aave"
                   required
+                  readOnly={!!editingId}
+                  disabled={!!editingId}
                 />
+                {editingId && (
+                  <p className="text-xs text-zinc-500 mt-1">El ID no se puede modificar</p>
+                )}
               </div>
 
               <div>
@@ -368,7 +418,7 @@ export function ProtocolsListView() {
             )}
 
             <Button type="submit" disabled={submitting} className="w-full">
-              {submitting ? 'Creando...' : 'Crear Protocolo'}
+              {submitting ? 'Guardando...' : (editingId ? 'Actualizar Protocolo' : 'Crear Protocolo')}
             </Button>
           </form>
         </Card>
@@ -446,10 +496,17 @@ export function ProtocolsListView() {
 
             <div className="flex gap-2 mt-auto">
               <Button
+                onClick={() => handleEdit(protocol)}
+                variant="secondary"
+                className="flex-1 text-xs"
+              >
+                ✏️ Editar
+              </Button>
+              <Button
                 onClick={() => toggleProtocolStatus(protocol.id, protocol.status)}
                 className="flex-1 text-xs"
               >
-                {protocol.status === 'public' ? '📝 Cambiar a Draft' : '👁️ Publicar'}
+                {protocol.status === 'public' ? '📝 Draft' : '👁️ Public'}
               </Button>
             </div>
           </Card>

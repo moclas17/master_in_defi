@@ -34,6 +34,7 @@ export function QuestionsListView() {
   const [selectedProtocol, setSelectedProtocol] = useState<string>('all')
   const [loading, setLoading] = useState(true)
   const [showAddForm, setShowAddForm] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     protocolId: '',
     text: '',
@@ -105,8 +106,11 @@ export function QuestionsListView() {
         return
       }
 
-      const response = await fetch('/api/questions', {
-        method: 'POST',
+      const url = editingId ? `/api/questions/${editingId}` : '/api/questions'
+      const method = editingId ? 'PUT' : 'POST'
+
+      const response = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
           'x-admin-secret': adminSecret,
@@ -120,7 +124,7 @@ export function QuestionsListView() {
       const data = await response.json()
 
       if (response.ok) {
-        setMessage('✓ Pregunta creada exitosamente')
+        setMessage(`✓ Pregunta ${editingId ? 'actualizada' : 'creada'} exitosamente`)
         setFormData({
           protocolId: '',
           text: '',
@@ -135,9 +139,10 @@ export function QuestionsListView() {
           ]
         })
         setShowAddForm(false)
+        setEditingId(null)
         fetchQuestions()
       } else {
-        setMessage(`✗ Error: ${data.error || 'Failed to create question'}`)
+        setMessage(`✗ Error: ${data.error || 'Failed to save question'}`)
       }
     } catch (error) {
       setMessage('✗ Error al crear pregunta')
@@ -170,6 +175,43 @@ export function QuestionsListView() {
     }
     const newAnswers = formData.answers.filter((_, i) => i !== index)
     setFormData({ ...formData, answers: newAnswers })
+  }
+
+  const handleEdit = (question: Question) => {
+    setEditingId(question.id)
+    setFormData({
+      protocolId: question.protocolId,
+      text: question.text,
+      explanation: question.explanation || '',
+      orderIndex: question.orderIndex,
+      active: question.active,
+      answers: question.answers.map(a => ({
+        text: a.text,
+        isCorrect: a.isCorrect,
+        orderIndex: a.orderIndex
+      }))
+    })
+    setShowAddForm(true)
+    setMessage('')
+  }
+
+  const cancelEdit = () => {
+    setEditingId(null)
+    setShowAddForm(false)
+    setFormData({
+      protocolId: '',
+      text: '',
+      explanation: '',
+      orderIndex: 0,
+      active: true,
+      answers: [
+        { text: '', isCorrect: false, orderIndex: 0 },
+        { text: '', isCorrect: false, orderIndex: 1 },
+        { text: '', isCorrect: false, orderIndex: 2 },
+        { text: '', isCorrect: false, orderIndex: 3 },
+      ]
+    })
+    setMessage('')
   }
 
   const inputClass = "w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -208,15 +250,17 @@ export function QuestionsListView() {
           </select>
         </div>
 
-        <Button onClick={() => setShowAddForm(!showAddForm)}>
+        <Button onClick={() => showAddForm ? cancelEdit() : setShowAddForm(true)}>
           {showAddForm ? 'Cancelar' : '+ Agregar Pregunta'}
         </Button>
       </div>
 
-      {/* Add Question Form */}
+      {/* Add/Edit Question Form */}
       {showAddForm && (
         <Card className="p-6">
-          <h3 className="text-lg font-semibold text-white mb-4">Nueva Pregunta</h3>
+          <h3 className="text-lg font-semibold text-white mb-4">
+            {editingId ? 'Editar Pregunta' : 'Nueva Pregunta'}
+          </h3>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -355,7 +399,7 @@ export function QuestionsListView() {
             )}
 
             <Button type="submit" disabled={submitting} className="w-full">
-              {submitting ? 'Creando...' : 'Crear Pregunta'}
+              {submitting ? 'Guardando...' : (editingId ? 'Actualizar Pregunta' : 'Crear Pregunta')}
             </Button>
           </form>
         </Card>
@@ -396,7 +440,7 @@ export function QuestionsListView() {
             </div>
 
             {/* Answers */}
-            <div className="space-y-2">
+            <div className="space-y-2 mb-4">
               {question.answers.map((answer, aIndex) => (
                 <div
                   key={answer.id}
@@ -423,6 +467,17 @@ export function QuestionsListView() {
                   )}
                 </div>
               ))}
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex gap-2 mt-auto">
+              <Button
+                onClick={() => handleEdit(question)}
+                variant="secondary"
+                className="flex-1 text-xs"
+              >
+                ✏️ Editar Pregunta
+              </Button>
             </div>
           </Card>
         ))}
