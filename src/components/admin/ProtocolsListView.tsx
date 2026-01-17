@@ -17,6 +17,7 @@ interface Protocol {
   category?: string
   difficulty?: string
   secretWord?: string
+  status: 'public' | 'draft'
   active: boolean
   orderIndex: number
   createdAt: string
@@ -36,6 +37,7 @@ export function ProtocolsListView() {
     category: 'lending',
     difficulty: 'intermediate',
     secretWord: '',
+    status: 'public' as 'public' | 'draft',
     active: true,
     orderIndex: 0,
   })
@@ -49,7 +51,14 @@ export function ProtocolsListView() {
   const fetchProtocols = async () => {
     setLoading(true)
     try {
-      const response = await fetch('/api/protocols')
+      // Get admin secret from localStorage or sessionStorage if available
+      const adminSecret = process.env.NEXT_PUBLIC_ADMIN_SECRET || ''
+
+      const response = await fetch('/api/protocols', {
+        headers: adminSecret ? {
+          'x-admin-secret': adminSecret
+        } : {}
+      })
       const data = await response.json()
 
       if (response.ok) {
@@ -99,6 +108,7 @@ export function ProtocolsListView() {
           category: 'lending',
           difficulty: 'intermediate',
           secretWord: '',
+          status: 'public',
           active: true,
           orderIndex: 0,
         })
@@ -112,6 +122,39 @@ export function ProtocolsListView() {
       console.error(error)
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const toggleProtocolStatus = async (protocolId: string, currentStatus: 'public' | 'draft') => {
+    const newStatus = currentStatus === 'public' ? 'draft' : 'public'
+
+    try {
+      const adminSecret = prompt('Ingresa el admin secret:')
+      if (!adminSecret) {
+        setMessage('✗ Admin secret requerido')
+        return
+      }
+
+      const response = await fetch(`/api/protocols/${protocolId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-secret': adminSecret,
+        },
+        body: JSON.stringify({ status: newStatus }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setMessage(`✓ Protocolo "${protocolId}" cambiado a ${newStatus}`)
+        fetchProtocols()
+      } else {
+        setMessage(`✗ Error: ${data.error || 'Failed to update protocol'}`)
+      }
+    } catch (error) {
+      setMessage('✗ Error al actualizar protocolo')
+      console.error(error)
     }
   }
 
@@ -233,7 +276,7 @@ export function ProtocolsListView() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="category" className={labelClass}>
                   Categoría
@@ -265,6 +308,24 @@ export function ProtocolsListView() {
                   <option value="beginner">Beginner</option>
                   <option value="intermediate">Intermediate</option>
                   <option value="advanced">Advanced</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="status" className={labelClass}>
+                  Estado *
+                </label>
+                <select
+                  id="status"
+                  value={formData.status}
+                  onChange={(e) => setFormData({ ...formData, status: e.target.value as 'public' | 'draft' })}
+                  className={inputClass}
+                  required
+                >
+                  <option value="public">Public (Visible para usuarios)</option>
+                  <option value="draft">Draft (Oculto, solo admin)</option>
                 </select>
               </div>
 
@@ -333,15 +394,26 @@ export function ProtocolsListView() {
                   <p className="text-xs text-zinc-500">ID: {protocol.id}</p>
                 </div>
               </div>
-              <span
-                className={`px-2 py-1 text-xs font-medium rounded-full ${
-                  protocol.active
-                    ? 'bg-green-900/30 text-green-400 border border-green-500/50'
-                    : 'bg-zinc-800 text-zinc-500 border border-zinc-700'
-                }`}
-              >
-                {protocol.active ? 'Activo' : 'Inactivo'}
-              </span>
+              <div className="flex gap-2">
+                <span
+                  className={`px-2 py-1 text-xs font-medium rounded-full ${
+                    protocol.status === 'public'
+                      ? 'bg-blue-900/30 text-blue-400 border border-blue-500/50'
+                      : 'bg-orange-900/30 text-orange-400 border border-orange-500/50'
+                  }`}
+                >
+                  {protocol.status === 'public' ? '👁️ Public' : '📝 Draft'}
+                </span>
+                <span
+                  className={`px-2 py-1 text-xs font-medium rounded-full ${
+                    protocol.active
+                      ? 'bg-green-900/30 text-green-400 border border-green-500/50'
+                      : 'bg-zinc-800 text-zinc-500 border border-zinc-700'
+                  }`}
+                >
+                  {protocol.active ? 'Activo' : 'Inactivo'}
+                </span>
+              </div>
             </div>
 
             {protocol.title && (
@@ -354,7 +426,7 @@ export function ProtocolsListView() {
               </p>
             )}
 
-            <div className="flex items-center gap-3 text-xs">
+            <div className="flex items-center gap-3 text-xs mb-4">
               {protocol.category && (
                 <span className="px-2 py-1 bg-blue-900/20 text-blue-400 rounded border border-blue-500/30">
                   {protocol.category}
@@ -370,6 +442,15 @@ export function ProtocolsListView() {
                   🔐 Secret Word
                 </span>
               )}
+            </div>
+
+            <div className="flex gap-2 mt-auto">
+              <Button
+                onClick={() => toggleProtocolStatus(protocol.id, protocol.status)}
+                className="flex-1 text-xs"
+              >
+                {protocol.status === 'public' ? '📝 Cambiar a Draft' : '👁️ Publicar'}
+              </Button>
             </div>
           </Card>
         ))}
