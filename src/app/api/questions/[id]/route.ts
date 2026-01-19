@@ -56,6 +56,8 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
+
     // Verify admin authentication
     const adminSecret = request.headers.get('x-admin-secret')
     if (!adminSecret || adminSecret !== process.env.ADMIN_SECRET) {
@@ -65,7 +67,6 @@ export async function PUT(
       )
     }
 
-    const { id } = await params
     const body = await request.json()
     const updates = {
       text: body.text,
@@ -105,6 +106,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
+
     // Verify admin authentication
     const adminSecret = request.headers.get('x-admin-secret')
     if (!adminSecret || adminSecret !== process.env.ADMIN_SECRET) {
@@ -114,7 +117,6 @@ export async function DELETE(
       )
     }
 
-    const { id } = await params
     const { searchParams } = new URL(request.url)
     const hardDelete = searchParams.get('hard') === 'true'
 

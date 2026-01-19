@@ -55,6 +55,8 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
+
     // Verify admin authentication
     const adminSecret = request.headers.get('x-admin-secret')
     if (!adminSecret || adminSecret !== process.env.ADMIN_SECRET) {
@@ -64,7 +66,6 @@ export async function PUT(
       )
     }
 
-    const { id } = await params
     const body = await request.json()
     const updates = {
       name: body.name,
@@ -74,6 +75,7 @@ export async function PUT(
       category: body.category,
       difficulty: body.difficulty,
       secretWord: body.secretWord,
+      status: body.status,
       active: body.active,
       orderIndex: body.orderIndex,
     }
@@ -109,6 +111,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
+
     // Verify admin authentication
     const adminSecret = request.headers.get('x-admin-secret')
     if (!adminSecret || adminSecret !== process.env.ADMIN_SECRET) {
@@ -118,7 +122,6 @@ export async function DELETE(
       )
     }
 
-    const { id } = await params
     const { searchParams } = new URL(request.url)
     const hardDelete = searchParams.get('hard') === 'true'
 

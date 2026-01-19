@@ -1,13 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getAllProtocols, createProtocol } from '@/lib/db/protocols'
+import { getAllProtocols, getAllProtocolsAdmin, createProtocol } from '@/lib/db/protocols'
 
 /**
  * GET /api/protocols
- * Get all active protocols
+ * Get all protocols (admin gets all including drafts, public gets only public)
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const protocols = await getAllProtocols()
+    // Check if admin secret is provided
+    const adminSecret = request.headers.get('x-admin-secret')
+    const isAdmin = adminSecret === process.env.ADMIN_SECRET
+
+    // Admin gets all protocols including drafts, public gets only public ones
+    const protocols = isAdmin ? await getAllProtocolsAdmin() : await getAllProtocols()
 
     return NextResponse.json({
       success: true,
@@ -52,6 +57,7 @@ export async function POST(request: NextRequest) {
       category,
       difficulty,
       secretWord,
+      status = 'public',
       active = true,
       orderIndex = 0,
     } = body
@@ -78,6 +84,7 @@ export async function POST(request: NextRequest) {
       category: category || null,
       difficulty: difficulty || null,
       secretWord: secretWord || null,
+      status: status as 'public' | 'draft',
       active,
       orderIndex,
     })
